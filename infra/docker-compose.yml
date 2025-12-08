@@ -1,0 +1,55 @@
+  
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: blog-db
+    environment:
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: blog_pass
+      POSTGRES_DB: blog
+    volumes:
+      - blog-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-net
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: blog-backend
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://blog_user:blog_pass@db:5432/blog
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    networks:
+      - app-net
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: blog-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    networks:
+      - app-net
+
+networks:
+  app-net:
+
+volumes:
+  blog-data:
+
+  
+  
+
