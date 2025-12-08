@@ -2,10 +2,10 @@ version: 0.2
 
 env:
   variables:
-    AWS_ACCOUNT_ID: "123456789012"
-    AWS_DEFAULT_REGION: "eu-west-1"
-    FRONTEND_REPO_NAME: "blog-frontend"
-    BACKEND_REPO_NAME: "blog-backend"
+    AWS_ACCOUNT_ID: "206492233485"
+    AWS_DEFAULT_REGION: "eu-west-2"
+    FRONTEND_REPO_NAME: "assimetria/blog-frontend"
+    BACKEND_REPO_NAME: "assimetria/blog-backend"
     IMAGE_TAG: "latest"
 
 phases:
