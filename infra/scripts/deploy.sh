@@ -52,9 +52,9 @@ aws ecr get-login-password --region "$AWS_REGION" | \
 cd "$(dirname "$0")"
 
 echo "Pulling latest images..."
-docker compose -f docker-compose.prod.yml pull
+docker compose -f ../docker-compose.prod.yml pull
 
 echo "Starting containers..."
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
+docker compose -f ../docker-compose.prod.yml up -d --remove-orphans
 
 echo "Deployment complete."
