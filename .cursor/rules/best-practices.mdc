@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Please generate code that follows all the relevant coding standards and best practices. The app should be **production-grade** as far as the challange specification allows (there must be only one EC2 instance etc)
