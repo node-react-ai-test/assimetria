@@ -15,7 +15,7 @@ const handleError = (error: unknown, next: NextFunction) => {
 // Schemas
 
 export const articleIdSchema = z.object({
-    id: z.coerce.number().int().positive(),
+    id: z.string().regex(/^[1-9]\d*$/, 'id must be a positive integer'),
 });
 
 export type ArticleIdParams = z.infer<typeof articleIdSchema>;

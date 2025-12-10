@@ -68,7 +68,7 @@ export class ArticleController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      const article = await this.articleService.getArticleById(id);
+      const article = await this.articleService.getArticleById(this.parseId(id));
       res.status(200).json(article);
     } catch (error) {
       if (error instanceof ArticleNotFoundError) {
@@ -101,7 +101,7 @@ export class ArticleController {
     try {
       const { id } = req.params;
       const body = req.body;
-      const article = await this.articleService.updateArticle(id, body);
+      const article = await this.articleService.updateArticle(this.parseId(id), body);
       res.status(200).json(article);
     } catch (error) {
       if (error instanceof ArticleNotFoundError) {
@@ -119,7 +119,7 @@ export class ArticleController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      await this.articleService.deleteArticle(id);
+      await this.articleService.deleteArticle(this.parseId(id));
       res.status(204).send();
     } catch (error) {
       if (error instanceof ArticleNotFoundError) {
@@ -166,5 +166,13 @@ export class ArticleController {
       pageSize: query.pageSize,
       sortDirection: query.sortDirection,
     };
+  }
+
+  private parseId(id: string): number {
+    const parsed = Number.parseInt(id, 10);
+    if (Number.isNaN(parsed)) {
+      throw new HttpError('Invalid article id', 400);
+    }
+    return parsed;
   }
 }
