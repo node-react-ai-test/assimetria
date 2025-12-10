@@ -26,7 +26,7 @@ jobs:
       - name: Start CodeBuild
         id: codebuild
         run: |
-          PROJECT="assimetria-auto-blog-build"
+          PROJECT="assimetria"
           BUILD_ID=$(aws codebuild start-build \
             --project-name "$PROJECT" \
             --query "build.id" \
