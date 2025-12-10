@@ -62,10 +62,10 @@ export class ArticleRepository {
     return this.mapRow(result.rows[0]);
   }
 
-  async listArticles(params?: ListArticlesParams): Promise<PaginatedArticlesResult> {
-    const page = this.normalizePage(params?.page);
-    const pageSize = this.normalizePageSize(params?.pageSize);
-    const sortDirection = this.normalizeSortDirection(params?.sortDirection);
+  async listArticles(params: ListArticlesParams): Promise<PaginatedArticlesResult> {
+    const page = params.page;
+    const pageSize = params.pageSize;
+    const sortDirection = params.sortDirection;
     const offset = (page - 1) * pageSize;
 
     const [itemsResult, totalResult] = await Promise.all([
@@ -106,16 +106,14 @@ export class ArticleRepository {
       throw new Error('Date range parameters are required');
     }
 
-    const fromDate = this.ensureValidDate(params.from, 'from');
-    const toDate = this.ensureValidDate(params.to, 'to');
+    const fromDate = params.from;
+    const toDate = params.to;
 
-    if (fromDate > toDate) {
-      throw new Error('"from" date must be earlier than or equal to "to" date');
-    }
 
-    const page = this.normalizePage(params.page);
-    const pageSize = this.normalizePageSize(params.pageSize);
-    const sortDirection = this.normalizeSortDirection(params.sortDirection);
+
+    const page = params.page;
+    const pageSize = params.pageSize;
+    const sortDirection = params.sortDirection;
     const offset = (page - 1) * pageSize;
 
     const [itemsResult, totalResult] = await Promise.all([
@@ -236,46 +234,6 @@ export class ArticleRepository {
     }
 
     return { assignments, values };
-  }
-
-  private normalizePage(page?: number): number {
-    if (!page || Number.isNaN(page) || page < 1) {
-      return 1;
-    }
-    return Math.floor(page);
-  }
-
-  private normalizePageSize(pageSize?: number): number {
-    if (!pageSize || Number.isNaN(pageSize)) {
-      return DEFAULT_PAGE_SIZE;
-    }
-
-    const trimmed = Math.floor(pageSize);
-    if (trimmed < 1) {
-      return 1;
-    }
-
-    return Math.min(trimmed, MAX_PAGE_SIZE);
-  }
-
-  private normalizeSortDirection(direction?: ArticleSortDirection): 'ASC' | 'DESC' {
-    if (!direction) {
-      return 'DESC';
-    }
-
-    return direction.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-  }
-
-  private ensureValidDate(value: Date, fieldName: 'from' | 'to'): Date {
-    if (!(value instanceof Date)) {
-      throw new Error(`"${fieldName}" must be a Date instance`);
-    }
-
-    if (Number.isNaN(value.getTime())) {
-      throw new Error(`"${fieldName}" must be a valid date`);
-    }
-
-    return value;
   }
 
   private mapRow(row: ArticleRow): Article {

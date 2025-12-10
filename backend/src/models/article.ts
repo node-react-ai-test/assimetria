@@ -24,15 +24,15 @@ export interface UpdateArticleInput {
 export interface GetArticlesByDatesParams {
   from: Date;
   to: Date;
-  page?: number;
-  pageSize?: number;
-  sortDirection?: ArticleSortDirection;
+  page: number;
+  pageSize: number;
+  sortDirection: ArticleSortDirection;
 
 }
 
 export interface ListArticlesParams {
-  page?: number;
-  pageSize?: number;
-  sortDirection?: ArticleSortDirection;
+  page: number;
+  pageSize: number;
+  sortDirection: ArticleSortDirection;
 }
  
