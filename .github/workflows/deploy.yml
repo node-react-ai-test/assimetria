@@ -1,0 +1,102 @@
+name: Build and deploy blog
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write      # needed for OIDC
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::206492233485:role/github-assimetria-deploy-role
+          aws-region: eu-west-2
+
+      - name: Start CodeBuild
+        id: codebuild
+        run: |
+          PROJECT="assimetria-auto-blog-build"
+          BUILD_ID=$(aws codebuild start-build \
+            --project-name "$PROJECT" \
+            --query "build.id" \
+            --output text)
+          echo "Build started: $BUILD_ID"
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for CodeBuild to succeed
+        run: |
+          BUILD_ID="${{ steps.codebuild.outputs.build_id }}"
+          echo "Waiting for CodeBuild build $BUILD_ID to complete..."
+
+          while true; do
+            STATUS=$(${aws} codebuild batch-get-builds \
+              --ids "$BUILD_ID" \
+              --query "builds[0].buildStatus" \
+              --output text)
+            echo "Current build status: $STATUS"
+            case "$STATUS" in
+              SUCCEEDED)
+                echo "Build succeeded."
+                break
+                ;;
+              FAILED|FAULT|STOPPED|TIMED_OUT)
+                echo "Build failed: $STATUS" >&2
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+
+      - name: Trigger deploy via SSM
+        run: |
+          AWS_REGION="eu-west-2"
+          INSTANCE_TAG_KEY="Role"
+          INSTANCE_TAG_VALUE="blog-ec2"
+
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --region "$AWS_REGION" \
+            --filters "Name=tag:$INSTANCE_TAG_KEY,Values=$INSTANCE_TAG_VALUE" "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
+
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "None" ]; then
+            echo "No running instance with tag $INSTANCE_TAG_KEY=$INSTANCE_TAG_VALUE" >&2
+            exit 1
+          fi
+
+          echo "Deploying to instance $INSTANCE_ID..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy blog containers" \
+            --instance-ids "$INSTANCE_ID" \
+            --parameters commands='["sudo bash /opt/blog/deploy-on-instance.sh"]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID"
+
+          echo "SSM command completed. Fetching output..."
+
+          aws ssm list-command-invocations \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --output text
