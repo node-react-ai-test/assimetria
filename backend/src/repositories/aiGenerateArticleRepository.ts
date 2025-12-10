@@ -10,13 +10,13 @@ export interface GenerateArticleParams {
 
 export interface AiArticleProviderConfig {
   endpoint: string;
-  apiKey?: string;
+  apiKey: string;
 }
 
 export interface HttpClientRequest<TRequest> {
   url: string;
   body: TRequest;
-  headers?: Record<string, string>;
+  headers: Record<string, string>;
 }
 
 export interface HttpClientResponse<TResponse> {

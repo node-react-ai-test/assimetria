@@ -3,7 +3,6 @@ import { QueryResult, QueryResultRow } from 'pg';
 import { runQuery } from '../db';
 import {
   Article,
-  ArticleSortDirection,
   CreateArticleInput,
   UpdateArticleInput,
   ListArticlesParams,
@@ -102,9 +101,6 @@ export class ArticleRepository {
   async listArticlesByDateRange(
     params: GetArticlesByDatesParams,
   ): Promise<PaginatedArticlesResult> {
-    if (!params) {
-      throw new Error('Date range parameters are required');
-    }
 
     const fromDate = params.from;
     const toDate = params.to;
