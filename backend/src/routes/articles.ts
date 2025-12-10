@@ -1,28 +1,31 @@
 // src/routes/articles.routes.ts
-import { Router, type RequestHandler } from 'express';
+import { Router } from 'express';
 import { asyncHandler, type AsyncHandler } from '../middleware/asyncHandler';
-import { validateBody, validateParams, validateQuery } from '../middleware/articlesValidation';
 import {
+  validateBody,
+  validateParams,
+  validateQuery,
+  articleIdSchema,
   createArticleSchema,
-  deleteArticleParamsSchema,
-  getArticleByIdParamsSchema,
-  getArticlesByDatesQuerySchema,
-  listArticlesQuerySchema,
-  updateArticleParamsSchema,
+  listArticlesSchema,
   updateArticleSchema,
-} from '../validation/articleSchemas';
+  type ArticleIdParams,
+  type CreateArticleBody,
+  type ListArticlesQuery,
+  type UpdateArticleBody,
+} from '../middleware/articlesValidation';
 
 /**
  * Contract for the article controller used by this router.
  * All handlers are standard Express RequestHandlers.
  */
 export interface ArticleController {
-  list: AsyncHandler;
-  getById: AsyncHandler;
-  getByDates: AsyncHandler;
-  create: AsyncHandler;
-  update: AsyncHandler;
-  delete: AsyncHandler;
+  list: AsyncHandler<unknown, unknown, unknown, ListArticlesQuery>;
+  getById: AsyncHandler<ArticleIdParams>;
+  getByDates: AsyncHandler<unknown, unknown, unknown, ListArticlesQuery>;
+  create: AsyncHandler<unknown, unknown, CreateArticleBody>;
+  update: AsyncHandler<ArticleIdParams, unknown, UpdateArticleBody>;
+  delete: AsyncHandler<ArticleIdParams>;
 }
 
 export interface CreateArticleRouterDeps {
@@ -43,19 +46,19 @@ export const createArticleRouter = (
 
   // GET /articles
   router.get('/',
-    validateQuery(listArticlesQuerySchema),
+    validateQuery(listArticlesSchema),
     asyncHandler(articleController.list),
   );
 
   // GET /articles/search?from=YYYY-MM-DD&to=YYYY-MM-DD
   router.get('/search',
-    validateQuery(getArticlesByDatesQuerySchema),
+    validateQuery(listArticlesSchema),
     asyncHandler(articleController.getByDates),
   );
 
   // GET /articles/:id
   router.get('/:id',
-    validateParams(getArticleByIdParamsSchema),
+    validateParams(articleIdSchema),
     asyncHandler(articleController.getById),
   );
 
@@ -69,14 +72,14 @@ export const createArticleRouter = (
   // PATCH /articles/:id
   router.patch(
     '/:id',
-    validateParams(updateArticleParamsSchema),
+    validateParams(articleIdSchema),
     validateBody(updateArticleSchema),
     asyncHandler(articleController.update),
   );
 
   // DELETE /articles/:id
   router.delete('/:id',
-    validateParams(deleteArticleParamsSchema),
+    validateParams(articleIdSchema),
     asyncHandler(articleController.delete),
   );
 
