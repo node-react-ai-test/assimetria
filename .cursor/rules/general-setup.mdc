@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 # Express.js Backend Architecture & DI Spec
 

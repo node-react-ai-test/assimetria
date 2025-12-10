@@ -1,9 +1,11 @@
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { CreateArticleInput } from '../models/article';
+import OpenAI from 'openai';
 
 export interface GenerateArticleParams {
-  topic: string;
-  keywords?: string[];
-  tone?: 'neutral' | 'casual' | 'formal';
+  model: string;
+  messages: ChatCompletionMessageParam[];
+
 }
 
 export interface AiArticleProviderConfig {
@@ -29,7 +31,7 @@ export interface HttpClient {
 }
 
 interface Dependencies {
-  httpClient?: HttpClient;
+  aiApiClient?: OpenAI;
   config?: AiArticleProviderConfig;
 }
 
@@ -40,25 +42,16 @@ interface ProviderArticleResponse {
 }
 
 export class AiGenerateArticleRepository {
-  private readonly httpClient?: HttpClient;
+  private readonly aiApiClient?: OpenAI;
   private readonly config?: AiArticleProviderConfig;
 
-  constructor({ httpClient, config }: Dependencies = {}) {
-    this.httpClient = httpClient;
+  constructor({ aiApiClient, config }: Dependencies = {}) {
+    this.aiApiClient = aiApiClient;
     this.config = config;
   }
 
   async generateArticle(params: GenerateArticleParams): Promise<CreateArticleInput> {
-    const normalizedTopic = params.topic?.trim();
-
-    if (!normalizedTopic) {
-      throw new Error('Topic is required to generate an article');
-    }
-
-    const providerResponse = await this.fetchArticleFromProvider({
-      ...params,
-      topic: normalizedTopic,
-    });
+    const providerResponse = await this.fetchArticleFromProvider(params);
 
     return {
       title: providerResponse.title,
@@ -70,50 +63,18 @@ export class AiGenerateArticleRepository {
   private async fetchArticleFromProvider(
     params: GenerateArticleParams,
   ): Promise<ProviderArticleResponse> {
-    if (this.httpClient && this.config?.endpoint) {
-      // The actual HTTP call will be implemented once the provider is selected.
-      // Leaving the structure in place keeps the public contract unchanged.
-      await Promise.resolve();
+    if (this.aiApiClient && this.config?.endpoint) {
+      const response = await this.aiApiClient.chat.completions.create({
+        model: params.model,
+        messages: params.messages,
+        
+      });
+      return {
+        title: response.choices[0].message.content ?? '',
+        content: response.choices[0].message.content ?? '',
+        photoUrl: null,
+      };
     }
-
-    return this.buildTemplateArticle(params);
+    throw new Error('AI API client or configuration is required');
   }
-
-  private buildTemplateArticle(params: GenerateArticleParams): ProviderArticleResponse {
-    const capitalizedTopic = this.capitalize(params.topic);
-    const tone = params.tone ?? 'neutral';
-    const keywordsLine = params.keywords?.length
-      ? `Key themes: ${params.keywords.join(', ')}.`
-      : '';
-
-    const title = `Insights on ${capitalizedTopic}`;
-    const paragraphs = [
-      `### Context`,
-      `A ${tone} walkthrough of the most relevant developments around ${capitalizedTopic}.`,
-      '',
-      `### Highlights`,
-      '1. Market signal or historical background.',
-      '2. Tactical guidance and actionable steps.',
-      '3. Additional resources and references.',
-      '',
-      keywordsLine,
-      '_Drafted automatically as a placeholder response._',
-    ].filter(Boolean);
-
-    return {
-      title,
-      content: paragraphs.join('\n'),
-      photoUrl: null,
-    };
-  }
-
-  private capitalize(value: string): string {
-    if (!value) {
-      return value;
-    }
-
-    return value.charAt(0).toUpperCase() + value.slice(1);
-  }
-
 }
-
