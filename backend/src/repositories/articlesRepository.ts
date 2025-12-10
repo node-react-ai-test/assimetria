@@ -1,13 +1,17 @@
 import { QueryResult, QueryResultRow } from 'pg';
 
 import { runQuery } from '../db';
+import {
+  ArticleRecord,
+  ArticleSortDirection,
+  CreateArticleInput,
+  UpdateArticleInput,
+} from '../models/article';
 
 type QueryRunner = <T extends QueryResultRow = QueryResultRow>(
   queryText: string,
   params?: ReadonlyArray<unknown>,
 ) => Promise<QueryResult<T>>;
-
-type ArticleSortDirection = 'asc' | 'desc';
 
 interface ArticleRow extends QueryResultRow {
   id: number;
@@ -16,27 +20,6 @@ interface ArticleRow extends QueryResultRow {
   photo_url: string | null;
   created_at: Date | string;
   updated_at: Date | string;
-}
-
-export interface ArticleRecord {
-  id: number;
-  title: string;
-  content: string;
-  photoUrl: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateArticleInput {
-  title: string;
-  content: string;
-  photoUrl?: string | null;
-}
-
-export interface UpdateArticleInput {
-  title?: string;
-  content?: string;
-  photoUrl?: string | null;
 }
 
 export interface ListArticlesParams {
