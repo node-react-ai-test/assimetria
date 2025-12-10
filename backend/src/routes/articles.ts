@@ -57,7 +57,7 @@ export const createArticleRouter = (
   );
 
   // GET /articles/:id
-  router.get('/:id',
+  router.get<ArticleIdParams>('/:id',
     validateParams(articleIdSchema),
     asyncHandler(articleController.getById),
   );
@@ -70,7 +70,7 @@ export const createArticleRouter = (
   );
 
   // PATCH /articles/:id
-  router.patch(
+  router.patch<ArticleIdParams, unknown, UpdateArticleBody>(
     '/:id',
     validateParams(articleIdSchema),
     validateBody(updateArticleSchema),
@@ -78,7 +78,7 @@ export const createArticleRouter = (
   );
 
   // DELETE /articles/:id
-  router.delete('/:id',
+  router.delete<ArticleIdParams>('/:id',
     validateParams(articleIdSchema),
     asyncHandler(articleController.delete),
   );
