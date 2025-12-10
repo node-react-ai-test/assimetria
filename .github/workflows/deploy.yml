@@ -77,7 +77,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Deploy blog containers" \
             --instance-ids "$INSTANCE_ID" \
-            --parameters commands='["sudo bash /scripts/deploy-on-instance.sh"]' \
+            --parameters commands='["sudo bash /home/ubuntu/scripts/deploy-on-instance.sh"]' \
             --query "Command.CommandId" \
             --output text)
 
