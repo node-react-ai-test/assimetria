@@ -42,7 +42,7 @@ A typical structure:
 - `src/app.js`
   - Express app and dependency wiring (composition root).
 - `src/routes/`
-  - `*.routes.js`: one file per resource (e.g. `user.routes.js`).
+  - `*.routes.js`: one file per resource (e.g. `article.routes.js`).
 - `src/controllers/`
   - `*.controller.js`: one controller per resource.
 - `src/services/`
@@ -65,8 +65,8 @@ The exact names can vary, but responsibilities **must** remain separated as abov
 
 ### Requirements
 
-- Each route file exports a **factory function** (e.g. `createUserRouter`) that:
-  - Receives dependencies through an object parameter (e.g. `{ userController }`).
+- Each route file exports a **factory function** (e.g. `createArticleRouter`) that:
+  - Receives dependencies through an object parameter (e.g. `{ articleController }`).
   - Creates an `express.Router` instance.
   - Registers routes (HTTP verb + path) that delegate to controller methods.
   - Attaches validation middleware before controller actions where needed.
@@ -75,7 +75,7 @@ The exact names can vary, but responsibilities **must** remain separated as abov
 ### Key Behaviours
 
 - Routes should only:
-  - Declare the HTTP method and path (e.g. `/users`, `/users/:id`).
+  - Declare the HTTP method and path (e.g. `/articles`, `/articles/:id`).
   - Attach middleware in the correct order (e.g. validation → handler).
   - Forward the request to the appropriate controller method.
 
@@ -93,8 +93,8 @@ The exact names can vary, but responsibilities **must** remain separated as abov
 
 ### Requirements
 
-- Each controller module exports a **factory function** (e.g. `createUserController`) that:
-  - Accepts dependencies, typically services (e.g. `{ userService }`).
+- Each controller module exports a **factory function** (e.g. `createArticleController`) that:
+  - Accepts dependencies, typically services (e.g. `{ articleService }`).
   - Returns an object containing controller methods (e.g. `list`, `getById`, `create`, `update`, `remove`).
 
 ### Responsibilities
@@ -128,7 +128,7 @@ Business logic and data access must be delegated to services and repositories.
 
 ### Requirements
 
-- Each service (e.g. `UserService`) is implemented as either:
+- Each service (e.g. `ArticleService`) is implemented as either:
   - A class that receives its dependencies (e.g. repositories) via constructor arguments, or
   - A factory that receives dependencies via a parameter object.
 - Services implement business operations such as:
@@ -146,7 +146,7 @@ Business logic and data access must be delegated to services and repositories.
 ### Constraints
 
 - Services do not know about HTTP status codes or Express middleware.
-- Services must receive all external dependencies via DI (e.g. `{ userRepository }`).
+- Services must receive all external dependencies via DI (e.g. `{ articleRepository }`).
 
 ---
 
@@ -156,7 +156,7 @@ Business logic and data access must be delegated to services and repositories.
 
 ### Requirements
 
-- Each repository (e.g. `UserRepository`) provides methods such as:
+- Each repository (e.g. `ArticleRepository`) provides methods such as:
   - `findMany` (for paginated lists).
   - `findById`.
   - `create`.
@@ -232,7 +232,7 @@ Business logic and data access must be delegated to services and repositories.
 
 ### Location
 
-- Stored in `src/validation/` as separate modules per resource (e.g. `userSchemas`).
+- Stored in `src/validation/` as separate modules per resource (e.g. `articleSchemas`).
 
 ---
 
@@ -249,7 +249,7 @@ Business logic and data access must be delegated to services and repositories.
   - Construct services with those repositories.
   - Construct controllers with those services.
   - Create routers by injecting controllers.
-  - Mount routers at appropriate paths (e.g. `/users`).
+  - Mount routers at appropriate paths (e.g. `/articles`).
   - Register a final global error-handling middleware.
 
 ### Constraints

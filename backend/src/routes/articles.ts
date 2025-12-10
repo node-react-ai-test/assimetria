@@ -1,4 +1,4 @@
-// src/routes/user.routes.ts
+// src/routes/articles.routes.ts
 import { Router, type RequestHandler } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { validateBody } from '../middleware/articlesValidation';
@@ -8,7 +8,7 @@ import {
 } from '../validation/articleSchemas';
 
 /**
- * Contract for the user controller used by this router.
+ * Contract for the article controller used by this router.
  * All handlers are standard Express RequestHandlers.
  */
 export interface ArticleController {
@@ -20,8 +20,12 @@ export interface ArticleController {
   delete: RequestHandler;
 }
 
+export interface CreateArticleRouterDeps {
+  articleController: ArticleController;
+}
+
 /**
- * Build a router for user-related endpoints.
+ * Build a router for article-related endpoints.
  *
  * This function is DI-friendly: it does not construct its own controller or services.
  * Everything it needs is passed in via the deps parameter.
@@ -32,27 +36,27 @@ export const createArticleRouter = (
   const { articleController } = deps;
   const router = Router();
 
-  // GET /users
+  // GET /articles
   router.get('/', asyncHandler(articleController.list));
 
-  // GET /users/:id
+  // GET /articles/:id
   router.get('/:id', asyncHandler(articleController.getById));
 
-  // POST /users
+  // POST /articles
   router.post(
     '/',
     validateBody(createArticleSchema),      // validation middleware
     asyncHandler(articleController.create), // controller
   );
 
-  // PATCH /users/:id
+  // PATCH /articles/:id
   router.patch(
     '/:id',
     validateBody(updateArticleSchema),
     asyncHandler(articleController.update),
   );
 
-  // DELETE /users/:id
+  // DELETE /articles/:id
   router.delete('/:id', asyncHandler(articleController.delete));
 
   return router;
