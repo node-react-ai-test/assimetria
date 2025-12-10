@@ -1,97 +1,328 @@
 ---
 alwaysApply: true
 ---
-# Express.js Architecture & DI Spec for LLM Agent
+# Express.js Backend Architecture & DI Spec
 
-This document describes how to implement an Express.js backend with:
+This document describes how to implement an Express.js backend using:
 
-- Thin **route** files
-- **Controllers** for HTTP logic
-- **Services** for business logic
-- **Repositories** for data access
-- Manual **dependency injection** (DI)
-- Centralized **error handling** and **validation**
+- Thin route files
+- Controllers for HTTP concerns
+- Services for business logic
+- Repositories for data access
+- Manual dependency injection (DI)
+- Centralised error handling and validation
 
-The goal is to keep code testable, decoupled, and aligned with common Node/Express best practices.
-
----
-
-## Core Principles
-
-- Use **Express** with clearly separated layers:
-  - Routes → HTTP paths & middleware wiring only
-  - Controllers → HTTP behavior (status codes, params, body, response)
-  - Services → Business logic
-  - Repositories → DB / external APIs / persistence
-- **No business logic in routes.**
-- Use **manual DI**:
-  - Do **not** instantiate services or controllers inside route files.
-  - All construction happens in the composition root (`app.js` / `server.js`).
-- Centralize **error handling** and **validation** via middleware.
+The intent is to keep the codebase testable, modular, and aligned with common Node/Express best practices.
 
 ---
 
-## Folder / File Structure
+## 1. Core Principles
 
-Use a structure similar to this:
-
-- `src/app.js` – Express app, dependency wiring (composition root).
-- `src/routes/*.routes.js` – One file per resource (e.g. `user.routes.js`).
-- `src/controllers/*.controller.js` – One controller per resource.
-- `src/services/*.service.js` – Business logic per domain/service.
-- `src/repositories/*.repository.js` – Data access per domain.
-- `src/middleware/asyncHandler.js` – Async error wrapper middleware.
-- `src/middleware/validateBody.js` – Request body validation middleware.
-- `src/validation/*.js` – Validation schemas (Joi, Zod, etc.).
-
-Names can vary slightly but responsibilities must be separated as above.
+- **Layered architecture**
+  - **Routes**: map HTTP paths and methods to controllers and middleware.
+  - **Controllers**: handle HTTP-specific concerns (status codes, parameters, request/response shaping).
+  - **Services**: encapsulate business logic and orchestration.
+  - **Repositories**: encapsulate data access (DB, external APIs, persistence).
+- **No business logic in routes**
+  - Routes should be declarative wiring only.
+- **Manual dependency injection**
+  - No `new` or direct instantiation of services/controllers in route files.
+  - All real dependencies are composed/wired at a single entry point (composition root).
+- **Centralised cross-cutting concerns**
+  - Asynchronous error handling via a single middleware wrapper.
+  - Request validation via reusable validation middleware.
+  - Global error handler as the final middleware.
 
 ---
 
-## Route Files
+## 2. Suggested Folder Structure
 
-**Example:** `src/routes/user.routes.js`
+A typical structure:
+
+- `src/app.js`
+  - Express app and dependency wiring (composition root).
+- `src/routes/`
+  - `*.routes.js`: one file per resource (e.g. `user.routes.js`).
+- `src/controllers/`
+  - `*.controller.js`: one controller per resource.
+- `src/services/`
+  - `*.service.js`: domain/business services.
+- `src/repositories/`
+  - `*.repository.js`: persistence layer / data access.
+- `src/middleware/`
+  - `asyncHandler.js`: async error wrapper.
+  - `validateBody.js`: request body validation middleware.
+- `src/validation/`
+  - `*.js`: validation schemas (e.g. for create/update operations).
+
+The exact names can vary, but responsibilities **must** remain separated as above.
+
+---
+
+## 3. Route Layer
+
+**Purpose:** Provide a thin mapping between HTTP endpoints and controller actions, plus the necessary middleware.
 
 ### Requirements
 
-- Export a **factory function** that accepts dependencies:
+- Each route file exports a **factory function** (e.g. `createUserRouter`) that:
+  - Receives dependencies through an object parameter (e.g. `{ userController }`).
+  - Creates an `express.Router` instance.
+  - Registers routes (HTTP verb + path) that delegate to controller methods.
+  - Attaches validation middleware before controller actions where needed.
+  - Wraps all async handlers in an async error wrapper middleware.
 
-  ```js
-  // src/routes/user.routes.js
-  import { Router } from 'express';
-  import { asyncHandler } from '../middleware/asyncHandler.js';
-  import { validateBody } from '../middleware/validateBody.js';
-  import {
-    createUserSchema,
-    updateUserSchema,
-  } from '../validation/userSchemas.js';
+### Key Behaviours
 
-  /**
-   * @param {object} deps
-   * @param {object} deps.userController
-   */
-  export function createUserRouter({ userController }) {
-    const router = Router();
+- Routes should only:
+  - Declare the HTTP method and path (e.g. `/users`, `/users/:id`).
+  - Attach middleware in the correct order (e.g. validation → handler).
+  - Forward the request to the appropriate controller method.
 
-    router.get('/', asyncHandler(userController.list));
+### Constraints
 
-    router.get('/:id', asyncHandler(userController.getById));
+- No service or repository instantiation inside route files.
+- No business rules or data access logic inside route files.
+- All controller functions referenced by the router are injected via DI.
 
-    router.post(
-      '/',
-      validateBody(createUserSchema),
-      asyncHandler(userController.create),
-    );
+---
 
-    router.patch(
-      '/:id',
-      validateBody(updateUserSchema),
-      asyncHandler(userController.update),
-    );
+## 4. Controller Layer
 
-    router.delete('/:id', asyncHandler(userController.remove));
+**Purpose:** Handle HTTP-level logic and translate between HTTP and domain operations.
 
-    return router;
-  }
+### Requirements
 
-  export default createUserRouter;
+- Each controller module exports a **factory function** (e.g. `createUserController`) that:
+  - Accepts dependencies, typically services (e.g. `{ userService }`).
+  - Returns an object containing controller methods (e.g. `list`, `getById`, `create`, `update`, `remove`).
+
+### Responsibilities
+
+- Read and normalize:
+  - URL parameters (`req.params`).
+  - Query parameters (`req.query`).
+  - Request body (`req.body`).
+- Call the appropriate service method with normalized arguments.
+- Choose and set appropriate HTTP status codes:
+  - `200` for successful reads/updates.
+  - `201` for successful creations.
+  - `204` for successful deletions with no response body.
+  - `404` when a requested resource is not found.
+- Shape response payloads using `res.json` or `res.send`.
+
+### Constraints
+
+- Controllers **must not**:
+  - Access the database directly.
+  - Embed raw SQL or ORM calls.
+  - Implement complex business logic beyond simple request/response translation.
+
+Business logic and data access must be delegated to services and repositories.
+
+---
+
+## 5. Service Layer
+
+**Purpose:** Encapsulate business logic and orchestration of repositories and other services.
+
+### Requirements
+
+- Each service (e.g. `UserService`) is implemented as either:
+  - A class that receives its dependencies (e.g. repositories) via constructor arguments, or
+  - A factory that receives dependencies via a parameter object.
+- Services implement business operations such as:
+  - Listing entities.
+  - Fetching a single entity.
+  - Creating, updating, and deleting entities.
+  - Applying domain-specific rules and checks.
+
+### Responsibilities
+
+- Enforce business rules and invariants.
+- Orchestrate calls between one or more repositories and any external services.
+- Remain independent of Express and HTTP concerns (no `req` or `res` objects).
+
+### Constraints
+
+- Services do not know about HTTP status codes or Express middleware.
+- Services must receive all external dependencies via DI (e.g. `{ userRepository }`).
+
+---
+
+## 6. Repository Layer
+
+**Purpose:** Abstract data access (database, ORM, external APIs, etc.) behind a clean interface.
+
+### Requirements
+
+- Each repository (e.g. `UserRepository`) provides methods such as:
+  - `findMany` (for paginated lists).
+  - `findById`.
+  - `create`.
+  - `update`.
+  - `delete`.
+- Methods wrap whatever data access mechanism is used (SQL, ORM, HTTP clients, etc.).
+
+### Responsibilities
+
+- Handle all persistence-related concerns.
+- Provide a simple and consistent API to services.
+
+### Constraints
+
+- No HTTP or Express-specific logic.
+- No business rules beyond what is strictly necessary for data consistency.
+
+---
+
+## 7. Async Error Handling Middleware
+
+**Purpose:** Avoid repeated `try/catch` blocks in every async route/controller, and centralise error forwarding.
+
+### Behaviour
+
+- Provide a function that:
+  - Accepts an async route/controller function.
+  - Returns a new function that:
+    - Calls the original function.
+    - Catches any thrown error or rejected promise.
+    - Passes the error to `next(err)` so that the global error handler can process it.
+
+### Usage
+
+- All async controller methods used by routes should be wrapped with this middleware in the route layer.
+
+---
+
+## 8. Body Validation Middleware
+
+**Purpose:** Centralise request body validation and keep controllers/services focused on business logic.
+
+### Behaviour
+
+- Provide a middleware factory that:
+  - Accepts a validation schema (e.g. from Joi, Zod, etc.).
+  - Validates `req.body` against the schema.
+  - On validation failure:
+    - Sends a `400 Bad Request` response.
+    - Returns a structured error payload, including message and a list of validation issues.
+  - On validation success:
+    - Replaces `req.body` with the validated/sanitised value.
+    - Calls `next()`.
+
+### Usage
+
+- Used in route definitions **before** controller handlers for endpoints that accept body data (e.g. `POST`, `PATCH`, `PUT`).
+
+---
+
+## 9. Validation Schemas
+
+**Purpose:** Define and centralise input constraints for API endpoints.
+
+### Behaviour
+
+- Schemas are defined per resource and operation, for example:
+  - A `create` schema with required fields.
+  - An `update` schema with all fields optional but requiring at least one field.
+- They should:
+  - Enforce types and required fields.
+  - Apply domain-specific constraints where appropriate (e.g. email format).
+
+### Location
+
+- Stored in `src/validation/` as separate modules per resource (e.g. `userSchemas`).
+
+---
+
+## 10. Composition Root / Application Wiring
+
+**Purpose:** Single place where dependencies are constructed and wired together.
+
+### Behaviour
+
+- `src/app.js` (or equivalent) should:
+  - Create the Express app.
+  - Register global middleware (e.g. JSON body parser).
+  - Construct repositories.
+  - Construct services with those repositories.
+  - Construct controllers with those services.
+  - Create routers by injecting controllers.
+  - Mount routers at appropriate paths (e.g. `/users`).
+  - Register a final global error-handling middleware.
+
+### Constraints
+
+- No other module should:
+  - Instantiate services, controllers, or routers.
+  - Override dependency wiring.
+- Composition root is responsible for the complete wiring of the dependency graph.
+
+---
+
+## 11. Global Error Handling
+
+**Purpose:** Provide a single, predictable place to handle errors and format error responses.
+
+### Behaviour
+
+- The global error handler should:
+  - Log the error (for monitoring / debugging).
+  - Respect `res.headersSent` and delegate to default Express behaviour if headers have already been sent.
+  - Determine an HTTP status code:
+    - Use a status code provided by the error if available.
+    - Fallback to `500 Internal Server Error` otherwise.
+  - Return a safe JSON payload to the client that does not leak sensitive internals.
+
+### Constraints
+
+- This middleware must be the **last** middleware registered on the Express app.
+
+---
+
+## 12. Dependency Injection Rules
+
+**General Rules**
+
+- All core dependencies are passed **inwards**:
+  - From the composition root → repositories → services → controllers → routes.
+- No layer should silently instantiate a lower layer dependency:
+  - Routes do not create controllers or services.
+  - Controllers do not create services or repositories.
+  - Services do not create repositories.
+
+**Benefits**
+
+- Improved testability.
+- Clear wiring and dependency graph.
+- Easier substitution of implementations (e.g. mock repositories in tests).
+
+---
+
+## 13. Testing Considerations
+
+The architecture must support easy unit and integration testing:
+
+- **Routes**
+  - Test routing behaviour by providing a fake controller object to the router factory.
+- **Controllers**
+  - Test HTTP logic by providing a fake service and stubbing `req`, `res`, `next`.
+- **Services**
+  - Test business rules by injecting fake repositories.
+- **Repositories**
+  - Test with real or test databases, or stub external API clients as needed.
+
+No layer should hard-code dependencies in a way that prevents these components from being replaced with fakes/mocks in tests.
+
+---
+
+## 14. Anti-Patterns to Avoid
+
+- Instantiating services or repositories inside route files or controllers.
+- Embedding business logic directly in route handlers.
+- Performing database queries directly in controllers.
+- Duplicating validation logic across multiple controllers instead of using centralised validation middleware.
+- Scattering error handling (multiple `try/catch` blocks) instead of using the async error wrapper + global error middleware.
+
+---
